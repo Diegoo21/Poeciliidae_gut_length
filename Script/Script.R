@@ -19,6 +19,25 @@ df <- read_csv("Poeciliid_specimen_data.csv") %>%
 
 df_mature <- filter(df, Stage == "Female")
 
+df_plot <- df %>%
+  filter(
+    !is.na(SL),
+    !is.na(AvgGutLength),
+    !is.na(Species),
+    SL > 0,
+    AvgGutLength > 0
+  ) %>%
+  mutate(
+    Species_full = recode(
+      Species,
+      "Acul" = "Alfaro cultratus",
+      "Brha" = "Brachyrhaphis rhabdophora",
+      "Pann" = "Priapichthys annectens",
+      "Pgil" = "Poecilia gillii",
+      "Xumb" = "Xenophallus umbratilis"
+    )
+  )
+
 # 3. Measurement repeatability ------------------------------------------
 # Repeatability of duplicate gut length measurements
 icc_results <- ICC(
@@ -60,7 +79,7 @@ summary(gut_pairs)
 # 5. Tradeoff model ------------------------------------------------------
 
 tradeoff_model <- lmer(
-  log10(AvgGutLength) ~ log10(SL) + log10(EmbryoDryWeight) +
+  log10(AvgGutLength) ~ log10(SL) + log10(EmbryoDryWeight) + as.numeric(EmbryoStage) +
     Species + (1 | Site),
   data = df_mature
 )
@@ -82,8 +101,9 @@ figure2 <- ggplot(
 ) +
   geom_point(
     color = "black",
-    size = 2.3,
-    alpha = 0.8
+    size = 2.4,
+    alpha = 0.85,
+    stroke = 0.8
   ) +
   geom_smooth(
     aes(group = Species_full),
@@ -91,10 +111,42 @@ figure2 <- ggplot(
     formula = y ~ x,
     se = TRUE,
     color = "black",
-    fill = "grey75",
-    alpha = 0.20,
+    fill = "grey80",
+    alpha = 0.25,
     linewidth = 0.9,
     fullrange = FALSE
+  ) +
+  scale_shape_manual(
+    values = c(
+      "Alfaro cultratus" = 16,             # filled circle
+      "Brachyrhaphis rhabdophora" = 17,   # filled triangle
+      "Poecilia gillii" = 15,             # filled square
+      "Priapichthys annectens" = 5,       # open diamond
+      "Xenophallus umbratilis" = 1        # open circle
+    ),
+    labels = c(
+      expression(italic("Alfaro cultratus")),
+      expression(italic("Brachyrhaphis rhabdophora")),
+      expression(italic("Poecilia gillii")),
+      expression(italic("Priapichthys annectens")),
+      expression(italic("Xenophallus umbratilis"))
+    )
+  ) +
+  scale_linetype_manual(
+    values = c(
+      "Alfaro cultratus" = "solid",
+      "Brachyrhaphis rhabdophora" = "dashed",
+      "Poecilia gillii" = "longdash",
+      "Priapichthys annectens" = "dotdash",
+      "Xenophallus umbratilis" = "dotted"
+    ),
+    labels = c(
+      expression(italic("Alfaro cultratus")),
+      expression(italic("Brachyrhaphis rhabdophora")),
+      expression(italic("Poecilia gillii")),
+      expression(italic("Priapichthys annectens")),
+      expression(italic("Xenophallus umbratilis"))
+    )
   ) +
   scale_x_log10(
     breaks = c(20, 30, 40, 50, 60, 70)
@@ -108,20 +160,33 @@ figure2 <- ggplot(
     shape = "Species",
     linetype = "Species"
   ) +
-  theme_bw(base_size = 14) +
+  guides(
+    shape = guide_legend(
+      override.aes = list(
+        linetype = c("solid", "dashed", "longdash", "dotdash", "dotted"),
+        color = "black",
+        fill = NA
+      )
+    ),
+    linetype = "none"
+  ) +
+  theme_bw(base_size = 14, base_family = "sans") +
   theme(
     panel.grid.minor = element_blank(),
-    legend.position = "right",
-    legend.title = element_text(size = 13),
-    legend.text = element_text(size = 11),
-    axis.title = element_text(size = 15),
-    axis.text = element_text(size = 12)
+    legend.position = c(0.80, 0.18),
+    legend.justification = c(0, 0),
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.key = element_blank(),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 11)
   )
 
 figure2
 
 ggsave(
-  filename = "Figure2_gut_length_allometry.png",
+  filename = "Figure2_gut_length_allometry.pdf",
   plot = figure2,
   width = 7,
   height = 5,
